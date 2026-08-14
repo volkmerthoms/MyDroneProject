@@ -1,0 +1,15 @@
+# Unreal Engine generated/build artifacts - not tracked
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+.vs/
+.vsconfig
+*.sln
+*.slnx
+
+# Content is out of scope for this repo for now (tutorial focuses on C++ only)
+Content/
+
+# OS/editor cruft
+*.user
