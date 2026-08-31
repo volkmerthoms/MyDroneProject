@@ -51,7 +51,7 @@ public:
 	float MassKg = 1.5f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
-	float ArmLengthCm = 45.f;
+	float ArmLengthCm = 100.f;
 
 	UFUNCTION(BlueprintCallable, Category = "Drone")
 	void ToggleCameraView();
