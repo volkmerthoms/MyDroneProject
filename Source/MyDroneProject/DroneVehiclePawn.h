@@ -53,6 +53,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
 	float ArmLengthCm = 100.f;
 
+	// --- Input setters, called by the PlayerController ---
+	UFUNCTION(BlueprintCallable, Category = "Drone|Input")
+	void SetThrottleInput(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Drone|Input")
+	void SetPitchInput(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Drone|Input")
+	void SetRollInput(float Value);
+	UFUNCTION(BlueprintCallable, Category = "Drone|Input")
+	void SetYawInput(float Value);
+
 	UFUNCTION(BlueprintCallable, Category = "Drone")
 	void ToggleCameraView();
 
@@ -61,6 +71,11 @@ public:
 
 private:
 	bool bUsingFpvCamera = false;
+
+	float RawThrottleInput = 0.f;
+	float RawPitchInput = 0.f;
+	float RawRollInput = 0.f;
+	float RawYawInput = 0.f;
 
 	FVector SpawnLocation = FVector::ZeroVector;
 	FRotator SpawnRotation = FRotator::ZeroRotator;

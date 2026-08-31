@@ -90,6 +90,26 @@ void ADroneVehiclePawn::BeginPlay()
 	BodyMesh->SetMassOverrideInKg(NAME_None, MassKg, true);
 }
 
+void ADroneVehiclePawn::SetThrottleInput(float Value)
+{
+	RawThrottleInput = FMath::Clamp(Value, -1.f, 1.f);
+}
+
+void ADroneVehiclePawn::SetPitchInput(float Value)
+{
+	RawPitchInput = FMath::Clamp(Value, -1.f, 1.f);
+}
+
+void ADroneVehiclePawn::SetRollInput(float Value)
+{
+	RawRollInput = FMath::Clamp(Value, -1.f, 1.f);
+}
+
+void ADroneVehiclePawn::SetYawInput(float Value)
+{
+	RawYawInput = FMath::Clamp(Value, -1.f, 1.f);
+}
+
 void ADroneVehiclePawn::ToggleCameraView()
 {
 	bUsingFpvCamera = !bUsingFpvCamera;
