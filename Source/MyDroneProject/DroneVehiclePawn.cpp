@@ -90,6 +90,74 @@ void ADroneVehiclePawn::BeginPlay()
 	BodyMesh->SetMassOverrideInKg(NAME_None, MassKg, true);
 }
 
+void ADroneVehiclePawn::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	ApplyFlightForces(DeltaSeconds);
+	UpdatePropellerVisuals(DeltaSeconds);
+}
+
+void ADroneVehiclePawn::ApplyFlightForces(float DeltaSeconds)
+{
+	SmoothedPitch = FMath::FInterpTo(SmoothedPitch, RawPitchInput, DeltaSeconds, InputSmoothingSpeed);
+	SmoothedRoll = FMath::FInterpTo(SmoothedRoll, RawRollInput, DeltaSeconds, InputSmoothingSpeed);
+	SmoothedYaw = FMath::FInterpTo(SmoothedYaw, RawYawInput, DeltaSeconds, InputSmoothingSpeed);
+
+	// Throttle is a rate command, not a level: holding Space climbs, holding LeftShift descends,
+	// and releasing both holds the current throttle - like a real quad's non-centering throttle
+	// stick. This lets the drone actually be trimmed to a hover instead of free-falling the
+	// instant the climb key is released.
+	CurrentThrottle01 = FMath::Clamp(CurrentThrottle01 + RawThrottleInput * ThrottleRatePerSecond * DeltaSeconds, 0.f, 1.f);
+
+	// Lift is applied along BodyMesh's own up axis (not world up) so that banking the drone also
+	// tilts the thrust vector, giving it horizontal thrust the same way a real quad translates by
+	// tilting into the direction of travel.
+	const float TotalLiftForce = CurrentThrottle01 * MaxThrustPerRotor * FMath::Max(RotorPoints.Num(), 1);
+	BodyMesh->AddForce(BodyMesh->GetUpVector() * TotalLiftForce);
+
+	// Attitude self-level: axis-angle PD controller, not an Euler-angle one. It rotates BodyMesh's
+	// up vector toward a target up vector tilted by the smoothed pitch/roll input (at the drone's
+	// current heading), using FQuat::FindBetweenNormals to get the correction axis.
+	const FRotator CurrentRotation = GetActorRotation();
+	const FVector CurrentUp = BodyMesh->GetUpVector();
+	const FVector AngularVelocityDeg = BodyMesh->GetPhysicsAngularVelocityInDegrees();
+
+	const FRotator TargetTiltRotation(SmoothedPitch * MaxTiltAngleDegrees, CurrentRotation.Yaw, SmoothedRoll * MaxTiltAngleDegrees);
+	const FVector TargetUp = TargetTiltRotation.Quaternion().GetUpVector();
+
+	const FQuat TiltCorrection = FQuat::FindBetweenNormals(CurrentUp, TargetUp);
+	const FVector TiltAxis = TiltCorrection.GetRotationAxis();
+	const float TiltErrorDeg = FMath::RadiansToDegrees(TiltCorrection.GetAngle());
+	const float TiltDampingTorque = FVector::DotProduct(AngularVelocityDeg, TiltAxis) * AttitudeDampingGain;
+	const FVector TiltTorque = TiltAxis * (TiltErrorDeg * AttitudeProportionalGain - TiltDampingTorque);
+
+	// Yaw is a separate rate command around the drone's own (possibly tilted) up axis.
+	const float YawDampingTorque = FVector::DotProduct(AngularVelocityDeg, CurrentUp) * AttitudeDampingGain;
+	const FVector YawTorque = CurrentUp * (SmoothedYaw * YawRateDegreesPerSecond * YawProportionalGain - YawDampingTorque);
+
+	BodyMesh->AddTorqueInDegrees(TiltTorque + YawTorque, NAME_None, true);
+
+	// Sign conventions (does forward stick pitch the nose down? does positive roll bank right?)
+	// were not verified against a running PIE session yet - flip the input sign above if a tilt
+	// direction comes out inverted once you actually test this in PIE.
+}
+
+void ADroneVehiclePawn::UpdatePropellerVisuals(float DeltaSeconds)
+{
+	const float SpinSpeedDegPerSec = 180.f + CurrentThrottle01 * 2400.f;
+	PropellerSpinDegrees = FMath::Fmod(PropellerSpinDegrees + SpinSpeedDegPerSec * DeltaSeconds, 360.f);
+
+	for (int32 i = 0; i < PropellerMeshes.Num(); ++i)
+	{
+		if (PropellerMeshes[i])
+		{
+			const float Direction = (i % 2 == 0) ? 1.f : -1.f;
+			PropellerMeshes[i]->SetRelativeRotation(FRotator(0.f, PropellerSpinDegrees * Direction, 0.f));
+		}
+	}
+}
+
 void ADroneVehiclePawn::SetThrottleInput(float Value)
 {
 	RawThrottleInput = FMath::Clamp(Value, -1.f, 1.f);

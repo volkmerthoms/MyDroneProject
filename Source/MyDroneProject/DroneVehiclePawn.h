@@ -27,6 +27,8 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	virtual void Tick(float DeltaSeconds) override;
+
 	// --- Components ---
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Drone|Components")
 	TObjectPtr<UStaticMeshComponent> BodyMesh;
@@ -53,6 +55,35 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
 	float ArmLengthCm = 100.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model", meta = (ClampMin = "0.1"))
+	float MaxThrustPerRotor = 550.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model", meta = (ClampMin = "1.0", ClampMax = "60.0"))
+	float MaxTiltAngleDegrees = 30.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
+	float YawRateDegreesPerSecond = 110.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
+	float AttitudeProportionalGain = 18.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
+	float AttitudeDampingGain = 6.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
+	float YawProportionalGain = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
+	float InputSmoothingSpeed = 6.f;
+
+	// Throttle is a rate command (climb/hold/descend), not a position - this is how fast it
+	// ramps from 0 to 1 per second while the climb input is held.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model", meta = (ClampMin = "0.05"))
+	float ThrottleRatePerSecond = 0.6f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Drone|State")
+	float CurrentThrottle01 = 0.f;
+
 	// --- Input setters, called by the PlayerController ---
 	UFUNCTION(BlueprintCallable, Category = "Drone|Input")
 	void SetThrottleInput(float Value);
@@ -70,12 +101,21 @@ public:
 	void AddCameraLookInput(float YawDelta, float PitchDelta);
 
 private:
+	void ApplyFlightForces(float DeltaSeconds);
+	void UpdatePropellerVisuals(float DeltaSeconds);
+
 	bool bUsingFpvCamera = false;
 
 	float RawThrottleInput = 0.f;
 	float RawPitchInput = 0.f;
 	float RawRollInput = 0.f;
 	float RawYawInput = 0.f;
+
+	float SmoothedPitch = 0.f;
+	float SmoothedRoll = 0.f;
+	float SmoothedYaw = 0.f;
+
+	float PropellerSpinDegrees = 0.f;
 
 	FVector SpawnLocation = FVector::ZeroVector;
 	FRotator SpawnRotation = FRotator::ZeroRotator;
