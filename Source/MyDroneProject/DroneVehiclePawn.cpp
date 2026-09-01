@@ -59,7 +59,7 @@ ADroneVehiclePawn::ADroneVehiclePawn()
 	ChaseCameraBoom->TargetArmLength = 450.f;
 	ChaseCameraBoom->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f));
 	ChaseCameraBoom->bUsePawnControlRotation = false;
-	ChaseCameraBoom->bDoCollisionTest = true;
+	ChaseCameraBoom->bDoCollisionTest = false;
 	ChaseCameraBoom->bEnableCameraLag = true;
 	ChaseCameraBoom->CameraLagSpeed = 4.f;
 	ChaseCameraBoom->bInheritPitch = false;

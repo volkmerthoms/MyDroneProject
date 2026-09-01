@@ -12,7 +12,7 @@ class USpringArmComponent;
 class UCameraComponent;
 
 /**
- * Video 2: component hierarchy only. No input, physics forces, or state machine yet -
+ * Video 2: component hierarchy only. No input, physics forces, or state machine yet - 
  * the drone will just sit there (or fall, once physics is simulated) until Video 4.
  */
 UCLASS()
