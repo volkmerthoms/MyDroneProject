@@ -46,7 +46,7 @@ ADroneVehiclePawn::ADroneVehiclePawn()
 		PropMesh->SetupAttachment(RotorPoint);
 		PropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		PropMesh->SetCastShadow(false);
-		PropMesh->SetRelativeScale3D(FVector(0.45f, 0.45f, 0.02f));
+		PropMesh->SetRelativeScale3D(FVector(0.45f, 0.15f, 0.02f));
 		if (PropMeshAsset.Succeeded())
 		{
 			PropMesh->SetStaticMesh(PropMeshAsset.Object);
