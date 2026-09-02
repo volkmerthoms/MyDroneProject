@@ -123,7 +123,9 @@ void ADroneVehiclePawn::ApplyFlightForces(float DeltaSeconds)
 	const FVector CurrentUp = BodyMesh->GetUpVector();
 	const FVector AngularVelocityDeg = BodyMesh->GetPhysicsAngularVelocityInDegrees();
 
-	const FRotator TargetTiltRotation(SmoothedPitch * MaxTiltAngleDegrees, CurrentRotation.Yaw, SmoothedRoll * MaxTiltAngleDegrees);
+	// Flying forward (W, positive pitch input) needs the nose to dip down, i.e. negative UE pitch -
+	// hence the sign flip here, verified against PIE where the unflipped version flew backwards.
+	const FRotator TargetTiltRotation(-SmoothedPitch * MaxTiltAngleDegrees, CurrentRotation.Yaw, SmoothedRoll * MaxTiltAngleDegrees);
 	const FVector TargetUp = TargetTiltRotation.Quaternion().GetUpVector();
 
 	const FQuat TiltCorrection = FQuat::FindBetweenNormals(CurrentUp, TargetUp);
@@ -137,10 +139,6 @@ void ADroneVehiclePawn::ApplyFlightForces(float DeltaSeconds)
 	const FVector YawTorque = CurrentUp * (SmoothedYaw * YawRateDegreesPerSecond * YawProportionalGain - YawDampingTorque);
 
 	BodyMesh->AddTorqueInDegrees(TiltTorque + YawTorque, NAME_None, true);
-
-	// Sign conventions (does forward stick pitch the nose down? does positive roll bank right?)
-	// were not verified against a running PIE session yet - flip the input sign above if a tilt
-	// direction comes out inverted once you actually test this in PIE.
 }
 
 void ADroneVehiclePawn::UpdatePropellerVisuals(float DeltaSeconds)
