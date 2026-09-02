@@ -34,6 +34,7 @@ private:
 	void OnLookYaw(const FInputActionValue& Value);
 	void OnLookPitch(const FInputActionValue& Value);
 	void OnToggleCamera(const FInputActionValue& Value);
+	void OnResetDrone(const FInputActionValue& Value);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputMappingContext> DroneMappingContext;
@@ -52,6 +53,8 @@ private:
 	TObjectPtr<UInputAction> IA_LookPitch;
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> IA_ToggleCamera;
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> IA_Reset;
 
 	UPROPERTY(Transient)
 	TObjectPtr<ADroneVehiclePawn> ControlledDrone;

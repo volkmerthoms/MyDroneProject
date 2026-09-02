@@ -11,10 +11,15 @@ class USceneComponent;
 class USpringArmComponent;
 class UCameraComponent;
 
-/**
- * Video 2: component hierarchy only. No input, physics forces, or state machine yet - 
- * the drone will just sit there (or fall, once physics is simulated) until Video 4.
- */
+UENUM(BlueprintType)
+enum class EDroneFlightState : uint8
+{
+	Idle,
+	Flying,
+	Crashed,
+	BatteryDepleted
+};
+
 UCLASS()
 class MYDRONEPROJECT_API ADroneVehiclePawn : public APawn
 {
@@ -81,6 +86,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model", meta = (ClampMin = "0.05"))
 	float ThrottleRatePerSecond = 0.6f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Flight Model")
+	float CrashImpactSpeedThreshold = 700.f;
+
+	// --- Battery ---
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Battery")
+	float BatteryDrainPerSecondAtFullThrottle = 4.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drone|Battery")
+	float BatteryIdleDrainPerSecond = 0.15f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Drone|Battery")
+	float BatteryPercent = 100.f;
+
+	// --- Runtime state readable from Blueprint / HUD ---
+	UPROPERTY(BlueprintReadOnly, Category = "Drone|State")
+	EDroneFlightState FlightState = EDroneFlightState::Idle;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Drone|State")
 	float CurrentThrottle01 = 0.f;
 
@@ -100,10 +122,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Drone|Camera")
 	void AddCameraLookInput(float YawDelta, float PitchDelta);
 
+	UFUNCTION(BlueprintCallable, Category = "Drone")
+	void ResetDrone();
+
+	UFUNCTION(BlueprintCallable, Category = "Drone")
+	void SetMotorsArmed(bool bArmed);
+
+	// --- Hooks for cosmetic feedback in Blueprint subclasses ---
+	UFUNCTION(BlueprintImplementableEvent, Category = "Drone|Events")
+	void OnDroneCrashed(float ImpactSpeed);
+	UFUNCTION(BlueprintImplementableEvent, Category = "Drone|Events")
+	void OnBatteryDepleted();
+	UFUNCTION(BlueprintImplementableEvent, Category = "Drone|Events")
+	void OnMotorsArmedChanged(bool bArmed);
+
 private:
+	UFUNCTION()
+	void HandleBodyHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
 	void ApplyFlightForces(float DeltaSeconds);
 	void UpdatePropellerVisuals(float DeltaSeconds);
+	void UpdateBattery(float DeltaSeconds);
 
+	bool bMotorsArmed = true;
 	bool bUsingFpvCamera = false;
 
 	float RawThrottleInput = 0.f;
@@ -119,4 +160,10 @@ private:
 
 	FVector SpawnLocation = FVector::ZeroVector;
 	FRotator SpawnRotation = FRotator::ZeroRotator;
+
+	// TeleportPhysics in ResetDrone() can leave BodyMesh touching/penetrating level geometry at the
+	// spawn point; the very next physics substep then resolves that overlap with a depenetration
+	// impulse that HandleBodyHit would otherwise misread as a fresh crash. Suppress hit detection for
+	// a short window after any reset so that push-out doesn't immediately re-trigger Crashed.
+	float CrashDetectionGraceSeconds = 0.f;
 };

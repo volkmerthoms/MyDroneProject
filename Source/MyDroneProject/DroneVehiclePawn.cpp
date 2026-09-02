@@ -88,18 +88,33 @@ void ADroneVehiclePawn::BeginPlay()
 	SpawnRotation = GetActorRotation();
 
 	BodyMesh->SetMassOverrideInKg(NAME_None, MassKg, true);
+	BodyMesh->OnComponentHit.AddDynamic(this, &ADroneVehiclePawn::HandleBodyHit);
+
+	FlightState = EDroneFlightState::Flying;
+	CrashDetectionGraceSeconds = 0.25f;
 }
 
 void ADroneVehiclePawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	if (CrashDetectionGraceSeconds > 0.f)
+	{
+		CrashDetectionGraceSeconds = FMath::Max(0.f, CrashDetectionGraceSeconds - DeltaSeconds);
+	}
+
 	ApplyFlightForces(DeltaSeconds);
+	UpdateBattery(DeltaSeconds);
 	UpdatePropellerVisuals(DeltaSeconds);
 }
 
 void ADroneVehiclePawn::ApplyFlightForces(float DeltaSeconds)
 {
+	if (!bMotorsArmed || FlightState == EDroneFlightState::Crashed)
+	{
+		return;
+	}
+
 	SmoothedPitch = FMath::FInterpTo(SmoothedPitch, RawPitchInput, DeltaSeconds, InputSmoothingSpeed);
 	SmoothedRoll = FMath::FInterpTo(SmoothedRoll, RawRollInput, DeltaSeconds, InputSmoothingSpeed);
 	SmoothedYaw = FMath::FInterpTo(SmoothedYaw, RawYawInput, DeltaSeconds, InputSmoothingSpeed);
@@ -156,6 +171,42 @@ void ADroneVehiclePawn::UpdatePropellerVisuals(float DeltaSeconds)
 	}
 }
 
+void ADroneVehiclePawn::UpdateBattery(float DeltaSeconds)
+{
+	if (FlightState == EDroneFlightState::Crashed || BatteryPercent <= 0.f)
+	{
+		return;
+	}
+
+	const float Drain = BatteryIdleDrainPerSecond + CurrentThrottle01 * BatteryDrainPerSecondAtFullThrottle;
+	BatteryPercent = FMath::Max(0.f, BatteryPercent - Drain * DeltaSeconds);
+
+	if (BatteryPercent <= 0.f && FlightState != EDroneFlightState::BatteryDepleted)
+	{
+		FlightState = EDroneFlightState::BatteryDepleted;
+		SetMotorsArmed(false);
+		OnBatteryDepleted();
+	}
+}
+
+void ADroneVehiclePawn::HandleBodyHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (FlightState == EDroneFlightState::Crashed || CrashDetectionGraceSeconds > 0.f)
+	{
+		return;
+	}
+
+	// Impulse = mass * delta-velocity, so this recovers an approximate impact speed without
+	// needing to cache pre-collision velocity separately.
+	const float ImpactSpeed = NormalImpulse.Size() / FMath::Max(MassKg, 0.01f);
+	if (ImpactSpeed > CrashImpactSpeedThreshold)
+	{
+		FlightState = EDroneFlightState::Crashed;
+		SetMotorsArmed(false);
+		OnDroneCrashed(ImpactSpeed);
+	}
+}
+
 void ADroneVehiclePawn::SetThrottleInput(float Value)
 {
 	RawThrottleInput = FMath::Clamp(Value, -1.f, 1.f);
@@ -189,4 +240,30 @@ void ADroneVehiclePawn::AddCameraLookInput(float YawDelta, float PitchDelta)
 	BoomRotation.Yaw += YawDelta;
 	BoomRotation.Pitch = FMath::Clamp(BoomRotation.Pitch + PitchDelta, -85.f, 20.f);
 	ChaseCameraBoom->SetRelativeRotation(BoomRotation);
+}
+
+void ADroneVehiclePawn::ResetDrone()
+{
+	BodyMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	BodyMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	SetActorLocationAndRotation(SpawnLocation, SpawnRotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+	BatteryPercent = 100.f;
+	FlightState = EDroneFlightState::Flying;
+	SetMotorsArmed(true);
+	CrashDetectionGraceSeconds = 0.25f;
+
+	RawThrottleInput = RawPitchInput = RawRollInput = RawYawInput = 0.f;
+	SmoothedPitch = SmoothedRoll = SmoothedYaw = 0.f;
+	CurrentThrottle01 = 0.f;
+}
+
+void ADroneVehiclePawn::SetMotorsArmed(bool bArmed)
+{
+	bMotorsArmed = bArmed;
+	if (bArmed && FlightState != EDroneFlightState::Crashed && FlightState != EDroneFlightState::BatteryDepleted)
+	{
+		FlightState = EDroneFlightState::Flying;
+	}
+	OnMotorsArmedChanged(bArmed);
 }

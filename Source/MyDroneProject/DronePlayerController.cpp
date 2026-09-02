@@ -42,6 +42,7 @@ void ADronePlayerController::SetupInputComponent()
 		EIC->BindAction(IA_LookYaw, ETriggerEvent::Triggered, this, &ADronePlayerController::OnLookYaw);
 		EIC->BindAction(IA_LookPitch, ETriggerEvent::Triggered, this, &ADronePlayerController::OnLookPitch);
 		EIC->BindAction(IA_ToggleCamera, ETriggerEvent::Started, this, &ADronePlayerController::OnToggleCamera);
+		EIC->BindAction(IA_Reset, ETriggerEvent::Started, this, &ADronePlayerController::OnResetDrone);
 	}
 }
 
@@ -68,6 +69,7 @@ void ADronePlayerController::BuildInputAssets()
 	IA_LookYaw = MakeAction(TEXT("IA_LookYaw"), EInputActionValueType::Axis1D);
 	IA_LookPitch = MakeAction(TEXT("IA_LookPitch"), EInputActionValueType::Axis1D);
 	IA_ToggleCamera = MakeAction(TEXT("IA_ToggleCamera"), EInputActionValueType::Boolean);
+	IA_Reset = MakeAction(TEXT("IA_Reset"), EInputActionValueType::Boolean);
 
 	// Throttle: Space climbs, LeftShift reduces toward/through zero (no reverse-thrust rotors,
 	// so "descend" is really just "climb less than hover" - matches a real quad).
@@ -87,6 +89,7 @@ void ADronePlayerController::BuildInputAssets()
 	DroneMappingContext->MapKey(IA_LookPitch, EKeys::MouseY);
 
 	DroneMappingContext->MapKey(IA_ToggleCamera, EKeys::C);
+	DroneMappingContext->MapKey(IA_Reset, EKeys::R);
 }
 
 void ADronePlayerController::OnThrottle(const FInputActionValue& Value)
@@ -142,5 +145,13 @@ void ADronePlayerController::OnToggleCamera(const FInputActionValue& Value)
 	if (ControlledDrone)
 	{
 		ControlledDrone->ToggleCameraView();
+	}
+}
+
+void ADronePlayerController::OnResetDrone(const FInputActionValue& Value)
+{
+	if (ControlledDrone)
+	{
+		ControlledDrone->ResetDrone();
 	}
 }
