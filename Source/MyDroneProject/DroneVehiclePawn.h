@@ -128,6 +128,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Drone")
 	void SetMotorsArmed(bool bArmed);
 
+	// --- Telemetry helpers for the HUD ---
+	UFUNCTION(BlueprintPure, Category = "Drone|Telemetry")
+	float GetAltitudeAboveGround() const;
+	UFUNCTION(BlueprintPure, Category = "Drone|Telemetry")
+	float GetSpeedKmh() const;
+	UFUNCTION(BlueprintPure, Category = "Drone|Telemetry")
+	float GetHoverThrottleEstimate() const;
+
 	// --- Hooks for cosmetic feedback in Blueprint subclasses ---
 	UFUNCTION(BlueprintImplementableEvent, Category = "Drone|Events")
 	void OnDroneCrashed(float ImpactSpeed);

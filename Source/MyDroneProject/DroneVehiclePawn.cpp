@@ -246,6 +246,32 @@ void ADroneVehiclePawn::AddCameraLookInput(float YawDelta, float PitchDelta)
 	ChaseCameraBoom->SetRelativeRotation(BoomRotation);
 }
 
+float ADroneVehiclePawn::GetAltitudeAboveGround() const
+{
+	const FVector Start = GetActorLocation();
+	const FVector End = Start - FVector(0.f, 0.f, 100000.f);
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(DroneAltitudeTrace), false, this);
+	FHitResult Hit;
+	if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))
+	{
+		return (Start.Z - Hit.Location.Z) / 100.f;
+	}
+	return -1.f;
+}
+
+float ADroneVehiclePawn::GetSpeedKmh() const
+{
+	return BodyMesh->GetPhysicsLinearVelocity().Size() * 0.036f; // cm/s -> km/h
+}
+
+float ADroneVehiclePawn::GetHoverThrottleEstimate() const
+{
+	const float TotalMaxThrust = MaxThrustPerRotor * FMath::Max(RotorPoints.Num(), 1);
+	const float WeightForce = MassKg * 980.f; // UE gravity is ~980 cm/s^2
+	return TotalMaxThrust > KINDA_SMALL_NUMBER ? FMath::Clamp(WeightForce / TotalMaxThrust, 0.f, 1.f) : 0.f;
+}
+
 void ADroneVehiclePawn::ResetDrone()
 {
 	if (BodyMesh)
