@@ -100,7 +100,7 @@ public:
 	float BatteryPercent = 100.f;
 
 	// --- Runtime state readable from Blueprint / HUD ---
-	UPROPERTY(BlueprintReadOnly, Category = "Drone|State")
+	UPROPERTY(BlueprintReadOnly, VisibleInstanceOnly, Category = "Drone|State")
 	EDroneFlightState FlightState = EDroneFlightState::Idle;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Drone|State")
