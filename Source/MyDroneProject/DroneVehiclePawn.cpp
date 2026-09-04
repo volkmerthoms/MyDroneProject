@@ -168,7 +168,13 @@ void ADroneVehiclePawn::HandleBodyHit(UPrimitiveComponent* HitComp, AActor* Othe
 		return;
 	}
 
-	const float ImpactSpeed = NormalImpulse.Size() / MassKg;
+	// NormalImpulse only reflects the force absorbed in this single collision-resolution tick. When
+	// the drone keeps thrusting into an obstacle (e.g. full throttle into a wall), the physics
+	// solver resolves that as many small pushes instead of one hard stop, so NormalImpulse never
+	// crosses the threshold even though the drone is clearly stuck against something. The drone's
+	// actual velocity at the moment of contact doesn't have that problem - it stays high for as
+	// long as the motors keep driving it into the obstacle.
+	const float ImpactSpeed = BodyMesh->GetPhysicsLinearVelocity().Size();
 
 	if (ImpactSpeed >= CrashImpactSpeedThreshold)
 	{
